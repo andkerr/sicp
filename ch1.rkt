@@ -23,11 +23,42 @@
 (define (f-iter n)
   (define (iter x y z count)
     (if (= count 0)
-        z
+        x
         (iter y
               z
               (+ (* 3 x) (* 2 y) (* 1 z))
               (dec count))))
-  (if (< n 3)
-      n
-      (iter 0 1 2 (- n 2))))
+  (iter 0 1 2 n))
+
+; Exercise 1.12 - Pascal's Triangle
+
+(define (binom-coeff x y)
+  (if (or (= y 0) (= x y))
+      1
+      (+
+       (binom-coeff (dec x) y)
+       (binom-coeff (dec x) (dec y)))))
+
+; Fast Exponentiation
+;
+; b^n = (b^n/2)^2,   if n is even
+;     = b * b^(n-1), if n is odd
+(define (square x) (* x x))
+
+(define (fast-expt b n)
+  (cond
+    ((= n 0) 1)
+    ((even? n) (square (fast-expt b (/ n 2))))
+    (else (* b (fast-expt b (dec n))))))
+
+; 1.16 - Linear Iterative Fast Exponentiation
+;
+; Hint: [b^(n/2)]^2 = [b^2]^(n/2) = b^n
+
+(define (fast-expt-iter b n)
+  (define (iter a b n)
+    (cond
+      ((= n 0) a)
+      ((even? n) (iter a (square b) (/ n 2)))
+      (else (iter (* a b) b (dec n)))))
+  (iter 1 b n))
