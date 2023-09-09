@@ -2,6 +2,7 @@
 
 ; Helpers
 (define (square x) (* x x))
+(define (cube x) (* x x x))
 (define (double x) (+ x x))
 (define (halve x) (/ x 2))
 
@@ -125,14 +126,14 @@
       (else (find-divisor (inc test)))))
   (find-divisor 2))
 
-(smallest-divisor   199)
-(smallest-divisor  1999)
-(smallest-divisor 19999)
+; (smallest-divisor   199) ; =  199
+; (smallest-divisor  1999) ; = 1999
+; (smallest-divisor 19999) ; =    7
 
 ; 1.22 - Prime Timing
 
 (define (prime? n)
-  (= (smallest-divisor n) n))
+  (= (smallest-divisor-fast n) n))
 
 
 (define (timed-prime-test n)
@@ -155,5 +156,122 @@
       ((< a b)
         (timed-prime-test a)
         (iter (+ a 2)))))
-  (iter (if (even? a) (inc a) a)))
   
+  (iter (if (even? a) (inc a) a)))
+
+; using naive smallest divisor...
+;
+; primes >    1000 - 1009, 1013, 1019, ...          (av. time =  ~8 units)
+;        >   10000 - 10007, 10009, 10037, ...       (av. time = ~24 units)
+;        >  100000 - 100003, 100019, 100043, ...    (av. time = ~25 units)
+;        > 1000000 - 1000003, 1000033, 1000037, ... (av. time = ~75 units)
+
+; 1.23 - A faster smallest-divisor algorithm
+
+(define (next x)
+  (if (= x 2)
+      (inc x)
+      (+ x 2)))
+
+
+(define (smallest-divisor-fast n)
+  (define (find-divisor test)
+    (cond
+      ((> (square test) n) n)
+      ((divides? test n) test)
+      (else (find-divisor (+ n 2)))))
+  (if (even? n)
+      2
+      (find-divisor 3)))
+
+; Demo - Generalized Sum
+;
+; with this formula to sum terms from a to b, we can...
+(define (sum term a next b)
+  (if (> a b)
+      0
+      (+ (term a)
+         (sum term (next a) next b))))
+
+; sum integers...
+(define (sum-ints a b)
+  (sum identity a inc b))
+
+; sum cubes...
+(define (sum-cubes a b)
+  (sum cube a inc b))
+
+; compute integrals (naively)...
+(define (integral f a b dx)
+  (define (add-dx x) (+ x dx))
+  (* (sum (+ a (/ dx 2.0)) add-dx b)
+     dx))
+
+; ...and so on.
+
+; 1.29 - Simpson's Rule
+
+(define (simpson f a b n)
+  (define h (/ (- b a) n))
+  (define (y k) (f (+ a (* k h))))
+  (define (term k)
+    (cond
+      ((or (= k 0) (= k n)) (y k))
+      ((even? k) (* 2 (y k)))
+      (else (* 4 (y k)))))
+  
+  (* (sum term 0 inc n)
+     (/ h 3)))
+     
+; 1.30 - Making sum() iterative
+
+(define (sum-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (+ result (term a)))))
+  (iter a 0))
+
+; 1.31 - Generalized product() procedure
+
+; recursive
+(define (product term a next b)
+  (if (> a b)
+      1
+      (* (term a) (product term (next a) next b))))
+
+; iterative
+(define (product-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (* (term a) result))))
+  (iter a 1))
+
+; approximating pi using
+;
+; (pi/4) = (2 * 4 * 4 * 6 * 6 * 8 * ...) / (3 * 3 * 5 * 5 * 7 * 7 * ...)
+
+(define (plus-two x) (+ x 2))
+
+(define (pi-approx n)
+  (* (/ (product square 4 plus-two (+ 4 (* 2 n)))
+        (product square 3 plus-two (+ 3 (* 2 n))))
+     8.0))
+
+; 1.32 - A general accumulate() procedure
+
+; recursive
+(define (accumulate op init term a next b)
+  (if (> a b)
+      init
+      (op (term a)
+          (accumulate op init term (next a) next b))))
+
+; iterative
+(define (accum-iter op init term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (op (term a) result))))
+  (iter a init))
