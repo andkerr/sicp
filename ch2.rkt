@@ -313,3 +313,38 @@
         result
         (iter (cdr l) (cons (car l) result))))
   (iter l (list)))
+
+; 2.19 - Making count-change flexible
+
+; recall the demonstration from Chapter 1
+(define (count-change amount coins)
+  (cond
+    ((= amount 0) 1)
+    ((or (< amount 0) (no-more? coins)) 0)
+    (else (+ (count-change amount
+              (except-first coins))
+             (count-change (- amount
+                              (first-denomination coins))
+                           coins)))))
+
+(define no-more? null?)
+(define first-denomination car)
+(define except-first cdr)
+
+; 2.20 - Variable numbers of arguments
+
+(define (same-parity x . y)
+  (cond
+    ((null? y) nil)
+    ((same-parity? x (car y)) (cons (car y)
+                                    (same-parity x (cdr y)))) ; <-- this calls same-parity with 2 arguments, no good!
+    (else (same-parity x (cdr y)))))
+
+(define (same-parity? x y)
+  (display x)
+  (newline)
+  (display y)
+  (newline)
+  (= (remainder x 2) (remainder y 2)))
+
+(same-parity 1 2 3 4 5 6 7)
