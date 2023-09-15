@@ -1,5 +1,7 @@
 #lang sicp
 
+(define (square x) (* x x))
+
 (define (neg? x) (< x 0))
 (define (same-sign? x y)
   (or (not (or (neg? x) (neg? y)))
@@ -334,17 +336,48 @@
 ; 2.20 - Variable numbers of arguments
 
 (define (same-parity x . y)
-  (cond
-    ((null? y) nil)
-    ((same-parity? x (car y)) (cons (car y)
-                                    (same-parity x (cdr y)))) ; <-- this calls same-parity with 2 arguments, no good!
-    (else (same-parity x (cdr y)))))
+  (define (iter l)
+    (cond
+      ((null? l) nil)
+      ((same-parity? x (car l)) (cons (car l)
+                                      (iter (cdr l))))
+      (else (iter (cdr l)))))
+  (cons x (iter y)))
 
 (define (same-parity? x y)
-  (display x)
-  (newline)
-  (display y)
-  (newline)
   (= (remainder x 2) (remainder y 2)))
 
-(same-parity 1 2 3 4 5 6 7)
+; 2.21 - The map() primitive
+
+(define (square-list-1 items)
+  (if (null? items)
+      nil
+      (cons (square (car items))
+            (square-list-1 (cdr items)))))
+
+(define (square-list-2 items)
+  (map square items))
+
+; 2.22 - for-each
+
+(define (for-each f items)
+  (cond
+    ((not (null? items))
+     (f (car items))
+     (for-each f (cdr items)))))
+
+; 2.27 - deep-reverse
+
+(define (deep-reverse items)
+  (define (iter x result)
+    (if (null? x)
+        result
+        (let ((elt (car x)))
+          (iter (cdr x)
+                (cons (if (list? elt)
+                          (deep-reverse elt)
+                          elt)
+                      result)))))
+  (iter items nil))
+
+; 2.28 - fringe() (enumerating a tree's leaves)
