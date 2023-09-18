@@ -303,7 +303,8 @@
 (define (append list1 list2)
   (if (null? list1)
       list2
-      (cons (car list1) (append (cdr list1) list2))))
+      (cons (car list1)
+            (append (cdr list1) list2))))
 
 ; 2.18 - Reversing a list
 ;
@@ -381,3 +382,75 @@
   (iter items nil))
 
 ; 2.28 - fringe() (enumerating a tree's leaves)
+
+(define (fringe x)
+  (cond
+    ((null? x) nil)
+    ((not (pair? x)) (list x))
+    (else (append (fringe (car x))
+                  (fringe (cdr x))))))
+
+; 2.29 - Implementing a "binary mobile"
+
+; 2.30 - square-tree()
+
+; a direct solution
+(define (square-tree tree)
+  (cond
+    ((null? tree) nil)
+    ((not (pair? tree)) (square tree))
+    (else (cons (square-tree (car tree))
+                (square-tree (cdr tree))))))
+
+; a solution using map
+(define (square-tree-map tree)
+  (map (lambda (subtree)
+         (if (pair? subtree)
+             (square-tree-map subtree)
+             (square subtree)))
+       tree))
+
+(define t (list 1
+                (list 2 (list 3 4) 5)
+                (list 6 7)))
+
+; 2.31 - A general tree-map
+
+(define (tree-map unary-op tree)
+  (map (lambda (subtree)
+         (if (pair? subtree)
+             (tree-map unary-op subtree)
+             (unary-op subtree)))
+       tree))
+
+; 2.32 - Generating power sets
+
+(define (subsets s)
+  (if (null? s)
+      (list nil)
+      (let ((rest (subsets (cdr s))))
+        (display s)
+        (newline)
+        (append rest (map (lambda (subset)
+                            (cons (car s) subset))
+                          rest)))))
+
+; Demo - Generalized sequence operations
+
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence)
+          (accumulate op initial (cdr sequence)))))
+
+; 2.33 - Basic list ops as accumulations
+
+(define (map-acc p sequence)
+  (accumulate (lambda (x y) (cons (p x) y)) nil sequence))
+
+(define (append-acc seq1 seq2)
+  (accumulate cons seq2 seq1))
+
+
+(define (length-acc sequence)
+  (accumulate (lambda (_ y) (+ 1 y)) 0 sequence))
