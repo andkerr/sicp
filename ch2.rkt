@@ -598,3 +598,304 @@
        (lambda (p) (cons i p))
        (unique-pairs (inc i) n)))
     (enumerate-interval 1 n))))
+
+; Extended Example - a picture language
+
+; 2.46 - Representing vectors
+
+(define (make-vect x y)
+  (cons x y))
+
+(define (xcor-vect v)
+  (car v))
+
+(define (ycor-vect v)
+  (cdr v))
+
+(define (add-vect v w)
+  (make-vect (+ (xcor-vect v) (xcor-vect w))
+             (+ (ycor-vect v) (ycor-vect w))))
+
+(define (sub-vect v w)
+  (make-vect (- (xcor-vect v) (xcor-vect w))
+             (- (ycor-vect v) (ycor-vect w))))
+
+(define (scale-vect s v)
+  (make-vect (* s (xcor-vect v))
+             (* s (ycor-vect v))))
+
+; 2.47 - Representing frames
+
+(define (make-frame origin edge1 edge2)
+  (cons origin (cons edge1 edge2)))
+
+(define (origin-frame frame)
+  (car frame))
+
+(define (edge1-frame frame)
+  (car (cdr frame)))
+
+(define (edge2-frame frame)
+  (cdr (cdr frame)))
+
+; 2.48 - Representing line segments
+;
+; (see exercise 2.2)
+
+; 2.54 - Testing for equality (or so they would have us believe...)
+
+(define (equal? list1 list2)
+  (cond
+    ((and (null? list1) (null? list2)) #t)
+    ((or (null? list1) (null? list2)) #f)
+    ((not (and (symbol? (car list1)) (symbol? (car list2)))) #f)
+    (else (and (eq? (car list1) (car list2))
+               (equal? (cdr list1) (cdr list2))))))
+
+; Demo - Symbolic Differentiation
+
+(define (deriv expr var)
+  (cond ((number? expr) 0)
+        ((variable? expr)
+         (if (same-variable? expr var) 1 0))
+        ((sum? expr)
+         (make-sum (deriv (addend expr) var)
+                   (deriv (augend expr) var)))
+        ((product? expr)
+         (make-sum (make-product (multiplier expr)
+                                 (deriv (multiplicand expr) var))
+                   (make-product (deriv (multiplier expr) var)
+                                 (multiplicand expr))))
+        ((exponentiation? expr)
+         (make-product (make-product (exponent expr)
+                                     (make-exponentiation (base expr)
+                                                          (dec (exponent expr))))
+                       (deriv (base expr) var)))
+        (else (error "Unrecognized expression type -- DERIV " expr))))
+
+(define (variable? x) (symbol? x))
+
+(define (same-variable? x y)
+  (and (variable? x) (variable? y) (eq? x y)))
+
+(define (=number? exp num)
+  (and (number? exp) (= exp num)))
+
+(define (make-sum x y)
+  (cond
+    ((=number? x 0) y)
+    ((=number? y 0) x)
+    ((and (number? x) (number? y)) (+ x y))
+    (else (list '+ x y))))
+
+(define (make-product x y)
+  (cond
+    ((=number? x 1) y)
+    ((=number? y 1) x)
+    ((and (number? x) (number? y)) (+ x y))
+    (else (list '* x y))))
+
+(define (make-exponentiation x y)
+  (cond
+    ((=number? y 0) 1)
+    ((=number? y 1) x)
+    (else (list '** x y))))
+
+(define (sum? x)
+  (and (pair? x) (eq? (car x) '+)))
+(define (addend x) (cadr x))
+(define (augend x) (caddr x))
+
+(define (product? x)
+  (and (pair? x) (eq? (car x) '*)))
+(define (multiplier x) (cadr x))
+(define (multiplicand x) (caddr x))
+
+(define (exponentiation? x)
+  (and (pair? x) (eq? (car x) '**)))
+(define (base x) (cadr x))
+(define (exponent x) (caddr x))
+
+; Demo - Representing Sets
+
+; ...as unordered lists (no duplicates)
+
+(define (element-of-set? x set)
+  (cond ((null? set) false)
+        ((equal? (car set) x) true)
+        (else (element-of-set? x (cdr set)))))
+
+(define (adjoin-set x set)
+  (if (element-of-set? x set)
+      set
+      (cons x set)))
+
+(define (intersection-set set1 set2)
+  (cond ((null? set1) '())
+        ((element-of-set? (car set1) set2)
+         (cons (car set1)
+               (intersection-set (cdr set1) set2)))
+        (else (intersection-set (cdr set1) set2))))
+
+; 2.59
+(define (union-set set1 set2)
+  (cond ((null? set1) set2)
+        ((element-of-set? (car set1) set2)
+         (union-set (cdr set1) set2))
+        (else (cons (car set1)
+                    (union-set (cdr set1) set2)))))
+
+; 2.60 - ...as unordered lists (with duplicates)
+;
+; element-of-set? could become quicker in the average case
+; adjoin-set becomes a constant time operation, and
+; union-set a linear time one (just append the sets to one
+; another). intersection-set becomes quicker on average due
+; to the performance improvement in element-of-set?
+
+; 2.61 - ...as ordered lists
+
+(define (element-of-set-ord? x set)
+  (cond ((null? set) false)
+        ((< x (car set))
+         (element-of-set-ord? x (cdr set)))
+        (else (= x (car set)))))
+
+(define (adjoin-set-ord x set)
+  (cond ((null? set) (list x))
+        ((< x (car set)) (cons x set))
+        ((= x (car set))
+         set)
+        (else (cons (car set) (adjoin-set-ord x (cdr set))))))
+
+(define (intersection-set-ord set1 set2)
+  (if (or (null? set1) (null? set2))
+      '()
+       (let ((x (car set1)) (y (car set2)))
+         (cond ((< x y)
+                (intersection-set-ord (cdr set1)
+                                      set2))
+               ((= x y)
+                (cons x
+                      (intersection-set-ord (cdr set1)
+                                            (cdr set2))))
+               (else (intersection-set-ord set1
+                                           (cdr set2)))))))
+
+; 2.62
+(define (union-set-ord set1 set2)
+  (cond ((and (null? set1) (null? set2)) '())
+        ((null? set1) set2)
+        ((null? set2) set1)
+        (else (let ((x (car set1)) (y (car set2)))
+                (cond ((< x y)
+                       (cons x (union-set-ord (cdr set1) set2)))
+                      ((= x y)
+                       (cons x (union-set-ord (cdr set1) (cdr set2))))
+                      (else
+                       (cons y (union-set-ord set1 (cdr set2)))))))))
+
+; ...as binary trees
+
+(define (datum node) (car node))
+(define (left node) (cadr node))
+(define (right node) (caddr node))
+
+(define (element-of-set-tree? x set)
+  (if (null? set)
+      false
+      (let ((d (datum set)))
+        (cond ((< x d) (element-of-set-tree? x (left set)))
+              ((> x d) (element-of-set-tree? x (right set)))
+              (else true)))))
+
+(define (adjoin-set-tree x set)
+  (if (null? set)
+      (list x '() '())
+      (let ((d (datum set)))
+        (cond ((< x d) (list d
+                             (adjoin-set-tree x (left set))
+                             (right set)))
+              ((> x d) (list d
+                             (left set)
+                             (adjoin-set-tree x (right set))))
+              (else set)))))
+
+; Demo / 2.63 - converting trees to lists
+
+(define (tree->list1 tree)
+  (if (null? tree)
+      '()
+      (append (tree->list1 (left tree))
+              (cons (datum tree)
+                    (tree->list1 (right tree))))))
+
+(define (tree->list2 tree)
+  (define (copy-to-list tree result)
+    (if (null? tree)
+        result
+        (copy-to-list (left tree)
+                      (cons (datum tree)
+                            (copy-to-list (right tree)
+                                          result)))))
+  (copy-to-list tree '()))
+
+; some sample trees
+(define tree1
+  (list 7
+        (list 3
+              (list 1 '() '())
+              (list 5 '() '()))
+        (list 9
+              '()
+              (list 11 '() '()))))
+
+(define tree2
+  (list 3
+        (list 1 '() '())
+        (list 7
+              (list 5 '() '())
+              (list 9
+                    '()
+                    (list 11 '() '())))))
+
+(define tree3
+  (list 5
+        (list 3
+              (list 1 '() '())
+              '())
+        (list 9
+              (list 7 '() '())
+              (list 11 '() '()))))
+
+; Demo / 2.64 - Converting ordered lists to trees
+
+(define (list->tree seq)
+  (define (partial-tree elts n)
+    (if (= n 0)
+        (cons '() elts)
+        (let ((left-size (quotient (dec n) 2)))
+          (let ((left-result (partial-tree elts left-size)))
+            (let ((left-tree (car left-result))
+                  (non-left-elts (cdr left-result))
+                  (right-size (- n (+ left-size 1))))
+              (let ((this-elt (car non-left-elts))
+                    (right-result (partial-tree (cdr non-left-elts)
+                                                right-size)))
+                (let ((right-tree (car right-result))
+                      (remaining-elts (cdr right-result)))
+                  (cons (list this-elt left-tree right-tree)
+                        remaining-elts))))))))
+  (partial-tree seq (length seq)))
+
+; 2.65 - intersection and union ("of trees")
+
+(define (intersection-set-tree set1 set2)
+  (list->tree (intersection-set-ord (tree->list2 set1)
+                                    (tree->list2 set2))))
+
+(define (union-set-tree set1 set2)
+  (list->tree (union-set-ord (tree->list2 set1)
+                             (tree->list2 set2))))
+
+; 2.66 - lookup-tree == element-of-set-tree, no?QQ
