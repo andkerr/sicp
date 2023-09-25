@@ -644,13 +644,16 @@
 
 ; 2.54 - Testing for equality (or so they would have us believe...)
 
-(define (equal? list1 list2)
+(define (equal? a b)
   (cond
-    ((and (null? list1) (null? list2)) #t)
-    ((or (null? list1) (null? list2)) #f)
-    ((not (and (symbol? (car list1)) (symbol? (car list2)))) #f)
-    (else (and (eq? (car list1) (car list2))
-               (equal? (cdr list1) (cdr list2))))))
+    ((and (symbol? a) (symbol? b)) (eq? a b))
+    ((and (list? a) (list? b))
+     (cond
+       ((and (null? a) (null? b)) true)
+       ((or (null? a) (null? b)) false)
+       ((not (equal? (car a) (car b))) false)
+       (else (equal? (cdr a) (cdr b)))))
+    (else false)))
 
 ; Demo - Symbolic Differentiation
 
@@ -898,4 +901,82 @@
   (list->tree (union-set-ord (tree->list2 set1)
                              (tree->list2 set2))))
 
-; 2.66 - lookup-tree == element-of-set-tree, no?QQ
+; 2.66 - lookup-tree == element-of-set-tree, no?
+
+; === Huffman Coding Trees ===
+
+(define (make-code-tree left right)
+  (list left
+        right
+        (append (symbols left) (symbols right))
+        (+ (weight left) (weight right))))
+
+(define (left-branch tree) (car tree))
+(define (right-branch tree) (cadr tree))
+(define (symbols tree)
+  (if (leaf? tree)
+      (list (symbol-leaf tree))
+      (caddr tree)))
+(define (weight tree)
+  (if (leaf? tree)
+      (weight-leaf tree)
+      (cadddr tree)))
+
+(define (make-leaf symbol weight)
+  (list 'leaf symbol weight))
+
+(define (leaf? x) (eq? (car x) 'leaf))
+(define (symbol-leaf x) (cadr x))
+(define (weight-leaf x) (caddr x))
+
+
+(define (decode bits tree)
+  (define (choose-branch bit tree)
+    (cond ((= bit 0) (left-branch tree))
+          ((= bit 1) (right-branch tree))
+          (else (error "bad bit -- CHOOSE BRANCH" bit))))
+  (define (decode-1 bits curr)
+    (if (null? bits)
+        '()
+        (let ((next-branch (choose-branch (car bits) curr)))
+          (if (leaf? next-branch)
+              (cons (symbol-leaf next-branch)
+                    (decode-1 (cdr bits) tree))
+              (decode-1 (cdr bits) next-branch)))))
+  (decode-1 bits tree))
+
+(define (adjoin-symbol-set x set)
+  (cond ((null? set) (list x))
+        ((< (weight x) (weight (car set)))
+         (cons x set))
+        (else (cons (car set)
+                    (adjoin-symbol-set x (cdr set))))))
+
+; Demo / 2.67
+
+(define sample-tree
+  (make-code-tree (make-leaf 'A 4)
+                  (make-code-tree
+                   (make-leaf 'B 2)
+                   (make-code-tree
+                    (make-leaf 'D 1)
+                    (make-leaf 'C 1)))))
+
+(define sample-msg '(0 1 1 0 0 1 0 1 0 1 1 1 0))
+
+; 2.68 - Encoding a message to bits
+
+(define (encode message tree)
+  (define (encode-1 sym branch) ; what to do if tree is empty??
+    (cond ((leaf? branch) '())
+          ((element-of-set? sym
+                            (symbols (left-branch branch)))
+           (cons 0 (encode-1 sym (left-branch branch))))
+          ((element-of-set? sym
+                            (symbols (right-branch branch)))
+           (cons 1 (encode-1 sym (right-branch branch))))
+          (else (error "bad symbol -- ENCODE-1" sym))))
+  (if (null? message)
+      '()
+      (append (encode-1 (car message) tree)
+              (encode (cdr message) tree))))
