@@ -945,12 +945,12 @@
               (decode-1 (cdr bits) next-branch)))))
   (decode-1 bits tree))
 
-(define (adjoin-symbol-set x set)
+(define (adjoin-leaf-set x set)
   (cond ((null? set) (list x))
         ((< (weight x) (weight (car set)))
          (cons x set))
         (else (cons (car set)
-                    (adjoin-symbol-set x (cdr set))))))
+                    (adjoin-leaf-set x (cdr set))))))
 
 ; Demo / 2.67
 
@@ -980,3 +980,26 @@
       '()
       (append (encode-1 (car message) tree)
               (encode (cdr message) tree))))
+
+; 2.69 - Generating a tree
+
+;(define (generate-huffman-tree pairs)
+;  (successive-merge (make-leaf-set pairs)))
+
+(define (make-leaf-set pairs)
+  (if (null? pairs)
+      '()
+      (let ((pair (car pairs)))
+        (adjoin-leaf-set (make-leaf (car pair)
+                                    (cdr pair))
+                         (make-leaf-set (cdr pairs))))))
+
+(define sample-pairs
+  (list '(A 2)
+        '(BOOM 1)
+        '(GET 2)
+        '(JOB 2)
+        '(NA 16)
+        '(SHA 3)
+        '(YIP 9)
+        '(WAH 1)))
