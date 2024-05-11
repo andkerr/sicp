@@ -1,24 +1,5 @@
 #lang racket
 
-(require test-engine/racket-tests)
-
-(define (fib n)
-  (define (iter a b i)
-    (if (= i 0)
-        a
-        (iter b (+ a b) (sub1 i))))
-  (iter 0 1 n))
-
-;(define (iota n)
-; (define (helper i)
-;    (if (> i n)
-;       '()
-;       (cons i (helper (add1 i)))))
-;  (helper 1))
-
-(define (inc x) (+ x 1))
-(define (dec x) (- x 1))
-
 (define (square x) (* x x))
 
 (define (neg? x) (< x 0))
@@ -355,9 +336,6 @@
 ; 2.19 - Making count-change flexible
 
 ; recall the demonstration from Chapter 1
-
-(define us-coins '(50 25 10 5 1))
-
 (define (count-change amount coins)
   (cond
     ((= amount 0) 1)
@@ -375,21 +353,22 @@
 ; 2.20 - Variable numbers of arguments
 
 (define (same-parity x . y)
-  (define (same-parity? x y)
-    (= (remainder x 2) (remainder y 2)))
   (define (iter l)
     (cond
-      ((null? l) '())
+      ((null? l) nil)
       ((same-parity? x (car l)) (cons (car l)
                                       (iter (cdr l))))
       (else (iter (cdr l)))))
   (cons x (iter y)))
 
+(define (same-parity? x y)
+  (= (remainder x 2) (remainder y 2)))
+
 ; 2.21 - The map() primitive
 
 (define (square-list-1 items)
   (if (null? items)
-      `()
+      nil
       (cons (square (car items))
             (square-list-1 (cdr items)))))
 
@@ -408,69 +387,33 @@
 
 (define (deep-reverse items)
   (define (iter x result)
-    (cond
-      ((null? x) result)
-      ((not (pair? x)) x)
-      (else
-       (iter (cdr x) (cons (deep-reverse (car x))
-                           result)))))
-  (iter items `()))
-
-(define (deep-reverse-v2 items)
-  (cond
-    ((null? items) '())
-    ((not (pair? items)) items)
-    (else (reverse (cons (deep-reverse (car items))
-                         (deep-reverse (cdr items)))))))
+    (if (null? x)
+        result
+        (let ((elt (car x)))
+          (iter (cdr x)
+                (cons (if (list? elt)
+                          (deep-reverse elt)
+                          elt)
+                      result)))))
+  (iter items nil))
 
 ; 2.28 - fringe() (enumerating a tree's leaves)
 
 (define (fringe x)
   (cond
-    ((null? x) `())
+    ((null? x) nil)
     ((not (pair? x)) (list x))
     (else (append (fringe (car x))
                   (fringe (cdr x))))))
 
 ; 2.29 - Implementing a "binary mobile"
 
-(define (make-mobile left right)
-  (list left right))
-
-(define (make-branch length structure)
-  (list length structure))
-
-(define (left-branch-mobile m) (car m))
-(define (right-branch-mobile m) (cadr m))
-(define (branch-length b) (car b))
-(define (branch-structure b) (cadr b))
-
-(define (total-weight mobile)
-  (cond
-    ((null? mobile) 0)
-    ((not (pair? mobile)) mobile)
-    (else
-     (+ (total-weight (branch-structure (left-branch mobile)))
-        (total-weight (branch-structure (right-branch mobile)))))))
-
-(define (balanced-mobile? m)
-  (define (branch-torque b)
-    (* (branch-length b) (total-weight (branch-structure b))))
-  (if (or (null? m) (not (pair? m)))
-      #t
-      (let ((l (left-branch-mobile m))
-            (r (right-branch-mobile m)))
-        (if (not (= (branch-torque l) (branch-torque r)))
-            #f
-            (and (balanced-mobile? (branch-structure l))
-                 (balanced-mobile? (branch-structure r)))))))
-
 ; 2.30 - square-tree()
 
 ; a direct solution
 (define (square-tree tree)
   (cond
-    ((null? tree) `())
+    ((null? tree) nil)
     ((not (pair? tree)) (square tree))
     (else (cons (square-tree (car tree))
                 (square-tree (cdr tree))))))
@@ -500,8 +443,10 @@
 
 (define (subsets s)
   (if (null? s)
-      (list `())
+      (list nil)
       (let ((rest (subsets (cdr s))))
+        (display s)
+        (newline)
         (append rest (map (lambda (subset)
                             (cons (car s) subset))
                           rest)))))
@@ -517,20 +462,14 @@
 ; 2.33 - Basic list ops as accumulations
 
 (define (map-acc p sequence)
-  (accumulate (lambda (x y) (cons (p x) y)) `() sequence))
-
-(check-expect (map-acc sub1 '(1 2 3 4 5)) '(0 1 2 3 4))
+  (accumulate (lambda (x y) (cons (p x) y)) nil sequence))
 
 (define (append-acc seq1 seq2)
   (accumulate cons seq2 seq1))
 
-(check-expect (append-acc '(1 2 3) '(4 5 6)) '(1 2 3 4 5 6))
 
 (define (length-acc sequence)
   (accumulate (lambda (_ y) (+ 1 y)) 0 sequence))
-
-(check-expect (length-acc '(1 2 3 4)) 4)
-(check-expect (length-acc '()) 0)
 
 
 ; 2.34 - Horner's Rule
@@ -540,8 +479,6 @@
                 (+ coeff (* x higher-terms)))
               0
               coefficients))
-
-(check-expect (horner-eval 2 '(1 3 0 5 0 1)) 79)
 
 ; 2.35 - count-leaves via accumulate
 
@@ -561,7 +498,7 @@
 
 (define (accumulate-n op init seqs)
   (if (null? (car seqs))
-      `()
+      nil
       (cons (accumulate op init (map car seqs))
             (accumulate-n op init (map cdr seqs)))))
 
@@ -579,7 +516,7 @@
 ;  (4 5 6)  ->  (2 5 8)
 ;  (7 8 9))     (3 6 9))
 (define (transpose mat)
-  (accumulate-n cons `() mat))
+  (accumulate-n cons nil mat))
 
 (define (matrix-*-matrix m n)
   (let ((cols (transpose n)))
@@ -605,40 +542,36 @@
 (define (reverse-right sequence)
   (right-fold (lambda (x acc)
                 (append acc (list x)))
-              `()
+              nil
               sequence))
 
 (define (reverse-left sequence)
   (left-fold (lambda (acc x)
                (cons x acc))
-             `()
+             nil
              sequence))
 
 ; 2.40 - Unique Pairs (a.k.a. using nested mappings)
 
 (define (flatmap proc seq)
-  (accumulate append `() (map proc seq)))
+  (accumulate append nil (map proc seq)))
 
-(define (enumerate a b)
+(define (enumerate-interval a b)
   (if (> a b)
-      `()
+      nil
       (cons a
-            (enumerate (inc a) b))))
+            (enumerate-interval (inc a) b))))
 
-(define (unique-pairs n)
+(define (unique-pairs lo hi)
   (flatmap
    (lambda (i)
      (map (lambda (j) (list i j))
-          (enumerate (inc i) n)))
-   (enumerate 1 n)))
-
-(check-expect (unique-pairs 0) '())
-(check-expect (unique-pairs 1) '())
-(check-expect (unique-pairs 4) '((1 2) (1 3) (1 4) (2 3) (2 4) (3 4)))
+          (enumerate-interval (inc i) hi)))
+   (enumerate-interval lo hi)))
 
 (define (filter pred? seq)
   (cond
-    ((null? seq) `())
+    ((null? seq) nil)
     ((pred? (car seq)) (cons (car seq)
                              (filter pred? (cdr seq))))
     (else (filter pred? (cdr seq)))))
@@ -656,51 +589,15 @@
 
 ; 2.41 - Ordered triples having sum
 
-(define (unique-triples n)
-  (flatmap (lambda (i)
-             (flatmap (lambda (j)
-                        (map (lambda (k)
-                               (list i j k))
-                             (enumerate (add1 j) n)))
-                      (enumerate (add1 i) n)))
-           (enumerate 1 n)))
-
 (define (triples-sum n s)
   (filter
    (lambda (t) (= (accumulate + 0 t) s))
-   (unique-triples n)))
-
-(check-expect (triples-sum 6 -1) '())
-(check-expect (triples-sum 6 10) '((1 3 6) (1 4 5) (2 3 5)))
-
-; even more fun, distinct k-tuples of positive integers not greater than n
-
-; the unique k-tuples of integers between i and n (inclusive) can be enumerated
-; by prepending j to each of the unique (k - 1)-tuples of integers between j + 1 and n,
-; for i <= j <= n
-
-; if k is greater than (n - i + 1), return the empty list
-
-(define (unique-tuples n k)
-  (define (unique-from i k)
-    (cond
-      ((> k (add1 (- n i))) '())
-      ((= k (add1 (- n i))) (list (enumerate i n)))
-      (else
-        (flatmap (lambda (j)
-                   (map (lambda (tuple)
-                          (cons i tuple))
-                        (unique-from (add1 j) (sub1 k))))
-                 (enumerate i n)))))
-  (flatmap (lambda (i)
-             (unique-from i k))
-           (enumerate 1 n)))
-
-(check-expect (unique-tuples 6 3) (unique-triples 6))
-(check-expect (unique-tuples 10 2) (unique-pairs 10))
-(check-expect (unique-tuples 4 1) '((1) (2) (3) (4)))
-(check-expect (unique-tuples 6 0) '())
-(check-expect (unique-tuples -1 4) '())
+   (flatmap
+    (lambda (i)
+      (map
+       (lambda (p) (cons i p))
+       (unique-pairs (inc i) n)))
+    (enumerate-interval 1 n))))
 
 ; Extended Example - a picture language
 
@@ -747,7 +644,7 @@
 
 ; 2.54 - Testing for equality (or so they would have us believe...)
 
-(define (my-equal? a b)
+(define (equal? a b)
   (cond
     ((and (symbol? a) (symbol? b)) (eq? a b))
     ((and (list? a) (list? b))
@@ -757,9 +654,6 @@
        ((not (equal? (car a) (car b))) false)
        (else (equal? (cdr a) (cdr b)))))
     (else false)))
-
-(check-expect (my-equal? '(this is a list) '(this is a list)) #t)
-(check-expect (my-equal? '(this is a list) '(this (is a) list)) #f)
 
 ; Demo - Symbolic Differentiation
 
@@ -776,11 +670,10 @@
                    (make-product (deriv (multiplier expr) var)
                                  (multiplicand expr))))
         ((exponentiation? expr)
-         (make-product
-          (make-product (exponent expr)
-                        (make-exponentiation (base expr)
-                                             (dec (exponent expr))))
-          (deriv (base expr) var)))
+         (make-product (make-product (exponent expr)
+                                     (make-exponentiation (base expr)
+                                                          (dec (exponent expr))))
+                       (deriv (base expr) var)))
         (else (error "Unrecognized expression type -- DERIV " expr))))
 
 (define (variable? x) (symbol? x))
@@ -791,68 +684,40 @@
 (define (=number? exp num)
   (and (number? exp) (= exp num)))
 
-(define (is-zero? x) (=number? x 0))
-(define (is-one? x) (=number? x 1))
-
-(define (none? pred? lst)
-  (= (memf pred? lst) #f))
-
-(define (any? pred? lst)
-  (not (= (memf pred? lst) #f)))
-
-(define (all? pred? lst)
-  (= (memf (negate pred?) lst) #f))
-
-; sum constructors / selectors
 (define (make-sum x y)
-  (cond ((and (number? x) (number? y)) (+ x y))
-        ((and (is-zero? x) y))
-        ((and (is-zero? y) x))
-        (else (list '+ x y))))
-(define (sum? x)
-  (and (pair? x) (eq? (car x) '+)))
-(define (addend x) (cadr x))
-(define (augend x)
-  (let ((rest (cddr x)))
-    (if (null? (cdr rest))
-        (car rest)
-        (cons '+ rest))))
+  (cond
+    ((=number? x 0) y)
+    ((=number? y 0) x)
+    ((and (number? x) (number? y)) (+ x y))
+    (else (list '+ x y))))
 
-; product constructors / selectors
 (define (make-product x y)
-  (cond ((and (number? x) (number? y)) (* x y))
-        ((or (is-zero? x) (is-zero? y)) 0)
-        ((is-one? x) y)
-        ((is-one? y) x)
-        (else (list '* x y))))
-(define (product? x)
-  (and (pair? x) (eq? (car x) '*)))
-(define (multiplier x) (cadr x))
-(define (multiplicand x)
-  (let ((rest (cddr x)))
-    (if (null? (cdr rest))
-        (car rest)
-        (cons '* rest))))
+  (cond
+    ((=number? x 1) y)
+    ((=number? y 1) x)
+    ((and (number? x) (number? y)) (+ x y))
+    (else (list '* x y))))
 
-; exponent constructors / selectors
 (define (make-exponentiation x y)
   (cond
     ((=number? y 0) 1)
     ((=number? y 1) x)
     (else (list '** x y))))
+
+(define (sum? x)
+  (and (pair? x) (eq? (car x) '+)))
+(define (addend x) (cadr x))
+(define (augend x) (caddr x))
+
+(define (product? x)
+  (and (pair? x) (eq? (car x) '*)))
+(define (multiplier x) (cadr x))
+(define (multiplicand x) (caddr x))
+
 (define (exponentiation? x)
   (and (pair? x) (eq? (car x) '**)))
 (define (base x) (cadr x))
 (define (exponent x) (caddr x))
-
-; 2.57 - Arbitrary number of terms in sums and products
-
-(define expr '(* x y (+ x 3)))
-
-(check-expect (deriv '(* x y (+ x 3)) 'x) '(+ (* x y) (* y (+ x 3))))
-(check-expect (deriv '(+ x x x x) 'x) 4)
-(check-expect (deriv '(* 1 1 1 1) 'x) 0)
-(check-expect (deriv '(* 4 x) 'x) 4)
 
 ; Demo - Representing Sets
 
@@ -1169,6 +1034,4 @@
     GET A JOB
     SHA NA NA NA NA NA NA NA
     WAH YIP YIP YIP YIP YIP YIP YIP YIP YIP
-    SHA BOOM))
-
-(print "To run tests, use (test)")
+    SHA BOOM hy))

@@ -57,9 +57,8 @@
 (define (binom-coeff x y)
   (if (or (= y 0) (= x y))
       1
-      (+
-       (binom-coeff (dec x) y)
-       (binom-coeff (dec x) (dec y)))))
+      (+ (binom-coeff (dec x) y)
+         (binom-coeff (dec x) (dec y)))))
 
 ; Demo - Fast Exponentiation (Recursive)
 ;
@@ -224,7 +223,7 @@
       (else (* 4 (y k)))))
   
   (* (sum term 0 inc n)
-     (/ h 3)))
+     (/ h 3.0)))
      
 ; 1.30 - Making sum() iterative
 
@@ -251,6 +250,9 @@
         (iter (next a) (* (term a) result))))
   (iter a 1))
 
+(define (factorial n)
+  (product-iter identity 1 inc n))
+
 ; approximating pi using
 ;
 ; (pi/4) = (2 * 4 * 4 * 6 * 6 * 8 * ...) / (3 * 3 * 5 * 5 * 7 * 7 * ...)
@@ -261,6 +263,13 @@
   (* (/ (product square 4 plus-two (+ 4 (* 2 n)))
         (product square 3 plus-two (+ 3 (* 2 n))))
      8.0))
+
+(define (pi-approx-v2 n)
+  (define (term n)
+    (/ (+ 2.0 (* (floor (/ (+ n 1) 2)) 2))
+       (+ 3.0 (* (floor (/ n 2)) 2))))
+  (* (product term 0 inc (- n 1))
+     4))
 
 ; 1.32 - A general accumulate() procedure
 
@@ -338,8 +347,8 @@
 
 (define (fixed-point f first-guess)
   (define (try guess)
-    (display guess)
-    (newline)
+    ;(display guess)
+    ;(newline)
     (let ((next (f guess)))
       (if (close-enough? next guess)
           next
@@ -355,18 +364,18 @@
 ; The Golden Ratio (1.618033...) is a fixed point
 ; of the transformation x -> 1 + 1/x, very cool.
 ; (define golden-ratio
-;   (fixed-point (lambda (x) (average x (+ 1 (/ 1 x))))
+;  (fixed-point (lambda (x) (average x (+ 1 (/ 1 x))))
 ;                1.0))
 
 ; 1.36 - Solving x^x = 1000
 
 ; without average damping
-(fixed-point (lambda (x) (/ (log 1000) (log x)))
-             4)
+; (fixed-point (lambda (x) (/ (log 1000) (log x)))
+;              4)
 
 ; with average damping
-(fixed-point (lambda (x) (average x (/ (log 1000) (log x))))
-             4)
+; (fixed-point (lambda (x) (average x (/ (log 1000) (log x))))
+ ;             4)
 
 ; 1.37 - A continued fraction procedure
 
@@ -387,10 +396,10 @@
   (iter k 0))
 
 ; n = 14 is accurate to 4 decimal places, very neat
-(define (golden-ratio n)
-  (reciprocal (cont-frac (lambda (_) 1.0)
-                         (lambda (_) 1.0)
-                         n)))
+(define (golden-ratio-cf k)
+  (reciprocal (cont-frac (lambda (i) 1.0)
+                         (lambda (i) 1.0)
+                         k)))
 
 ; 1.38 - e as a continued fraction
 
@@ -403,9 +412,12 @@
                 n)
      2))
 
+(define PI 3.1415926535897932384626433)
 ; 1.39 - tan(x) as a continued fraction
-;
-; TODO
+(define (tan-cf x k)
+  (cont-frac (lambda (i) (if (= i 1) x (- (square x))))
+             (lambda (i) (- (* 2 i) 1))
+             k))
 
 ; Demo - Returning a procedure as a value
 (define (average-damp f)
@@ -479,6 +491,17 @@
   ((repeated smooth n) f))
 
 ; 1.45 - Nth roots
+;
+; 1 avg. damp - n = 1, 2, 3
+; 2 avg. damp - n = 4, 5, 6, 7
+; 3 avg. damp - n = 8, 9, 10, 11, 12, 13, 14, 15 ???
+
+(define (nth-root x n)
+  (let ((d (inexact->exact (floor (log n 2)))))
+    (fixed-point ((repeated average-damp d)
+                  (lambda (y) (/ x
+                                 (expt y (- n 1)))))
+                 1.0)))
 
 ; 1.46 - Iterated improvement
 

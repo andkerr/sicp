@@ -1,3 +1,6 @@
 *.swp
 *.rkt~
 *.rkt-autorec.*
+
+*.pyc
+__pycache__/
