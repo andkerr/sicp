@@ -9,13 +9,6 @@
         (iter b (+ a b) (sub1 i))))
   (iter 0 1 n))
 
-;(define (iota n)
-; (define (helper i)
-;    (if (> i n)
-;       '()
-;       (cons i (helper (add1 i)))))
-;  (helper 1))
-
 (define (inc x) (+ x 1))
 (define (dec x) (- x 1))
 
@@ -854,6 +847,8 @@
 (check-expect (deriv '(* 1 1 1 1) 'x) 0)
 (check-expect (deriv '(* 4 x) 'x) 4)
 
+(deriv '(* x y (+ x 3)) 'x)
+
 ; Demo - Representing Sets
 
 ; ...as unordered lists (no duplicates)
@@ -1163,6 +1158,12 @@
         '(D 1)
         '(C 1)))
 
+(define sample-pairs-4
+  (list '(FOO 2)
+        '(BAR 29)
+        '(BAZ 4)
+        '(QUX 1)))
+
 (define sample-message
   '(GET A JOB
     SHA NA NA NA NA NA NA NA
@@ -1171,4 +1172,12 @@
     WAH YIP YIP YIP YIP YIP YIP YIP YIP YIP
     SHA BOOM))
 
-(print "To run tests, use (test)")
+(check-expect (length (encode sample-message
+                              (generate-huffman-tree sample-pairs)))
+              82)
+(check-expect (decode (encode sample-message
+                              (generate-huffman-tree sample-pairs))
+                      (generate-huffman-tree sample-pairs))
+              sample-message)
+
+(test)
