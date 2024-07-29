@@ -23,6 +23,16 @@
 
 (define (raise x) (apply-generic 'raise x))
 
+;;
+(define (type-less? x y)
+  (define tower '(exact rational inexact complex))
+  #f)
+
+(define (raise-to x dst-type)
+  (if (eq? (type-tag x) dst-type)
+      x
+      (raise-to (raise x) dst-type)))
+
 (define (install-scheme-number-package)
   (put 'add '(scheme-number scheme-number) +)
   (put 'sub '(scheme-number scheme-number) -)
@@ -33,9 +43,12 @@
        (lambda (x) (= x 0)))
   (put 'raise '(scheme-number)
        (lambda (x)
-         (if (exact? x)
-             (make-rational x 1)
-             (make-complex-from-real-imag x 0))))
+         (case
+             ((integer? x) (make-rational x 1))
+             ((rational? x) (exact->inexact x))
+             ((real? x) (make-complex-from-real-imag x 0))
+             (else (error "What kind of number is this -- RAISE (scheme-number)"
+                          x)))))
   'install-scheme-number-package->done)
 
 (define (install-rational-package)
@@ -43,8 +56,10 @@
   (define (numer x) (car x))
   (define (denom x) (cdr x))
   (define (make-rat n d)
-    (let ((g (gcd n d)))
-      (cons (/ n g) (/ d g))))
+    (if (= d 0)
+        (error "Denominator must be non-zero -- MAKE-RAT")
+        (let ((g (gcd n d)))
+          (cons (/ n g) (/ d g)))))
   (define (add-rat x y)
     (make-rat (+ (* (numer x) (denom y))
                  (* (numer y) (denom x)))
