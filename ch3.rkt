@@ -1,4 +1,5 @@
 #lang racket
+(require compatibility/mlist) ;; we'll we doing plenty of mutating soon...
 
 ;; 3.1
 (define (make-accumulator sum)
@@ -106,3 +107,81 @@
   (display "\n")
   (display (+ (f 1) (f 0)))
   (display "\n"))
+
+;; 3.14
+;;
+;; This mystery procedure reverses a mutable list by repeatedly setting the
+;; second element of the first pair to the list of elements "reversed so far".
+;; When passed a list via a named variable, the variable will point only to
+;; to the first pair afterwards, with the rest of the list seemingly stripped
+;; away (see the variable v in the mystery-test procedure below). In this
+;; sense, the mystery procedure does not reverse its argument in-place. The
+;; fully reversed list can only be accessed if the return value is bound to
+;; some parameter.
+(define (mystery x)
+  (define (loop x y)
+    (if (null? x)
+        y
+        (let ((temp (mcdr x)))
+          (set-mcdr! x y)
+          (loop temp x))))
+  (loop x '()))
+
+(define (mystery-test)
+  (define v (mlist 1 2 3))
+  (define w (mystery v))
+  (display v)
+  (display "\n")
+  (display w)
+  (display "\n"))
+
+(define x '(a b))
+(define z1 (cons x x))
+(define z2 (cons '(a b) '(a b)))
+
+;; 3.16
+;;
+;; This is a "buggy" version of a procedure to count the number of distinct
+;; pairs in a list structure. It doesn't account for the possibility that
+;; pairs may be shared under the hood (e.g. what if the car and cdr of a pair
+;; are the same pair?), and possibly over count certain pairs.
+(define (count-pairs-bad x)
+  (if (not (pair? x)) ;; cycle -> BOOM!
+      0
+      (+ (count-pairs-bad (car x))
+         (count-pairs-bad (cdr x))
+         1)))
+
+;; 3.17
+;;
+;; This version of count-pairs accounts for shared objects by maintaining a
+;; list of already-seen pairs while traversing the provided structure. I don't
+;; think it's possible to make the list a direct argument of the traversal
+;; subroutine count (i.e. we need to mutate a globally visible list instead),
+;; since objects shared between "branches" wouldn't be accounted for (the
+;; alread-seen list would really be a stack).
+(define (count-pairs-good x)
+  (let ((seen '()))
+    (define (update-seen p)
+      (if (memq p seen)
+          #f
+          (begin
+            (set! seen (cons p seen))
+            #t)))
+    (define (count x)
+      (if (not (pair? x))
+          0
+          (let ((new-pair? (update-seen x)))
+            (+ (count (car x))
+               (count (cdr x))
+               (if new-pair? 1 0)))))
+  (count x)))
+
+;; 3.18 / 3.19 - Finding cycles in a (linked) list, blah blah
+(define (has-cycle? seq)
+  (define (find-cycle slow fast first?)
+    (cond
+      ((or (null? fast) (null? (cdr fast))) #f)
+      ((and (not first?) (eq? slow fast)) #t)
+      (else (find-cycle (cdr slow) (cdr (cdr fast)) #f))))
+  (find-cycle seq seq #t))
