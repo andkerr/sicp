@@ -2,11 +2,6 @@
 
 ;; constraints
 
-(define (inform-about-value constraint)
-  (constraint 'I-have-a-value))
-(define (inform-about-no-value constraint)
-  (constraint 'I-lost-my-value))
-
 (define (adder a1 a2 sum)
   (define (process-new-value)
     (cond ((and (has-value? a1) (has-value? a2))
@@ -81,11 +76,11 @@
 
 (define (probe name connector)
   (define (print-probe value)
-    (newline)
     (display "Probe: ")
     (display name)
     (display " = ")
-    (display value))
+    (display value)
+    (newline))
   (define (process-new-value)
     (print-probe (get-value connector)))
   (define (process-forget-value)
@@ -100,18 +95,12 @@
   (connect connector me)
   me)
 
-;; connectors
+(define (inform-about-value constraint)
+  (constraint 'I-have-a-value))
+(define (inform-about-no-value constraint)
+  (constraint 'I-lost-my-value))
 
-(define (has-value? connector)
-  (connector 'has-value?))
-(define (get-value connector)
-  (connector 'value))
-(define (set-value! connector new-value informant)
-  ((connector 'set-value!) new-value informant))
-(define (forget-value! connector retractor)
-  ((connector 'forget) retractor))
-(define (connect connector new-constraint)
-  ((connector 'connect) new-constraint))
+;; connectors
 
 (define (make-connector)
   (let ((value false) (informant false) (constraints '()))
@@ -127,7 +116,8 @@
             (else 'ignored)))
     (define (forget-my-value retractor)
       (if (eq? retractor informant)
-          (begin (set! informant false)
+          (begin (set! value false)
+                 (set! informant false)
                  (for-each-except retractor
                                   inform-about-no-value
                                   constraints))
@@ -150,6 +140,19 @@
                          request))))
     me))
 
+(define (has-value? connector)
+  (connector 'has-value?))
+(define (get-value connector)
+  (connector 'value))
+(define (set-value! connector new-value informant)
+  ((connector 'set-value!) new-value informant))
+(define (forget-value! connector retractor)
+  ((connector 'forget) retractor))
+(define (connect connector new-constraint)
+  ((connector 'connect) new-constraint))
+
+;; helpers
+
 (define (for-each-except exception procedure list)
   (define (loop items)
     (cond ((null? items) 'done)
@@ -157,3 +160,83 @@
           (else (procedure (car items))
                 (loop (cdr items)))))
   (loop list))
+
+;; demo: averager
+
+(define (averager a b c)
+  (let ((u (make-connector))
+        (two (make-connector)))
+    (constant 2 two)
+    (adder a b u)
+    (multiplier c two u)
+    'ok))
+
+(define (squarer a b)
+  (define (square x) (* x x))
+  (define (process-new-value)
+    (if (has-value? b)
+        (if (< (get-value b) 0)
+            (error "square less than 0 -- SQUARER" (get-value b))
+            (set-value! a (sqrt (get-value b)) me))
+        (set-value! b (square (get-value a)) me)))
+  (define (process-forget-value)
+    (forget-value! b me)
+    (forget-value! a me)
+    (process-new-value))
+  (define (me request)
+    (cond ((eq? request 'I-have-a-value)
+           (process-new-value))
+          ((eq? request 'I-lost-my-value)
+           (process-forget-value))
+          (else
+           (error "Unknown request -- SQUARER" request))))
+  (connect a me)
+  (connect b me)
+  me)
+
+(define A (make-connector))
+(define B (make-connector))
+
+(squarer A B)
+
+(probe "a" A)
+(probe "b" B)
+
+;; 3.37 - arithmetic operators for connectors
+
+(define (c+ x y)
+  (let ((z (make-connector)))
+    (adder x y z)
+    z))
+
+;; z = x - y
+;; z + y = x
+(define (c- x y)
+  (let ((z (make-connector)))
+    (adder z y x)
+    z))
+
+(define (c* x y)
+  (let ((z (make-connector)))
+    (multiplier x y z)
+    z))
+
+;; z = x / y
+;; z * y = x
+(define (c/ x y)
+  (let ((z (make-connector)))
+    (multiplier z y x)
+    z))
+
+(define (cv value)
+  (let ((x (make-connector)))
+    (constant value x)
+    x))
+
+;; demo...
+(define (celsius-fahrenheit-converter x)
+  (c+ (c* (c/ (cv 9) (cv 5))
+          x)
+      (cv 32)))
+(define C (make-connector))
+(define F (celsius-fahrenheit-converter C))
